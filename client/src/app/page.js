@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Background,
   ReactFlow,
@@ -10,13 +10,11 @@ import {
   useNodesState,
   useEdgesState,
 } from "@xyflow/react";
-import ELK from "elkjs/lib/elk.bundled.js"; // ✅ Use bundled version (no worker)
+import ELK from "elkjs/lib/elk.bundled.js"; // ✅ Use non-worker version
 import "@xyflow/react/dist/style.css";
 
-// ELK layout engine instance
 const elk = new ELK();
 
-// Layout function using ELK
 const applyElkLayout = async (nodes, edges) => {
   const elkNodes = nodes.map((node) => ({
     id: node.id,
@@ -63,6 +61,7 @@ const applyElkLayout = async (nodes, edges) => {
 const Flow = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
 
   const fetchGraphData = async () => {
     try {
@@ -94,6 +93,7 @@ const Flow = () => {
         target: edge.target,
         type: "smoothstep",
         animated: true,
+        style: { stroke: "#222", strokeWidth: 1.5 }, // default style
       }));
 
       const { nodes: layoutedNodes, edges: layoutedEdges } =
@@ -101,6 +101,7 @@ const Flow = () => {
 
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
+      setSelectedNodeId(null); // reset selection on reload
     } catch (error) {
       console.error("Error fetching graph data:", error);
     }
@@ -109,6 +110,23 @@ const Flow = () => {
   useEffect(() => {
     fetchGraphData();
   }, []);
+
+  // Highlight connected edges in red
+  useEffect(() => {
+    setEdges((eds) =>
+      eds.map((edge) => {
+        const isConnected =
+          edge.source === selectedNodeId || edge.target === selectedNodeId;
+        return {
+          ...edge,
+          style: {
+            stroke: isConnected ? "red" : "#222",
+            strokeWidth: isConnected ? 2.5 : 1.5,
+          },
+        };
+      })
+    );
+  }, [selectedNodeId, setEdges]);
 
   const onConnect = useCallback(
     (params) =>
@@ -121,6 +139,10 @@ const Flow = () => {
     []
   );
 
+  const onNodeClick = useCallback((_, node) => {
+    setSelectedNodeId((prev) => (prev === node.id ? null : node.id));
+  }, []);
+
   return (
     <div style={{ width: "100vw", height: "100vh" }}>
       <ReactFlow
@@ -129,12 +151,13 @@ const Flow = () => {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeClick={onNodeClick}
         connectionLineType={ConnectionLineType.SmoothStep}
         fitView
         style={{ backgroundColor: "#F7F9FB" }}
       >
         <Panel position="top-right">
-          <button onClick={() => fetchGraphData()}>Reload Layout</button>
+          <button onClick={fetchGraphData}>Reload Layout</button>
         </Panel>
         <Background />
       </ReactFlow>
