@@ -69,24 +69,25 @@ const Flow = () => {
         "https://api-oos.jojonomic.com/27407/rnd/system-mapper/get-flow"
       );
       const data = await response.json();
-
+  
       if (!data.nodes || !data.edges) {
         console.error("Invalid API response:", data);
         return;
       }
-
+  
       const nodeIds = new Set(data.nodes.map((node) => node.id));
       const validEdges = data.edges.filter(
         (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
       );
-
+  
       const transformedNodes = data.nodes.map((node) => ({
         id: node.id,
         type: "default",
         data: { label: node.data?.label || node.id },
         position: { x: 0, y: 0 },
+        style: { color: "black" }, // Set label color to black
       }));
-
+  
       const transformedEdges = validEdges.map((edge, index) => ({
         id: edge.id || `e-${edge.source}-${edge.target}-${index}`,
         source: edge.source,
@@ -95,10 +96,10 @@ const Flow = () => {
         animated: true,
         style: { stroke: "#222", strokeWidth: 1.5 }, // default style
       }));
-
+  
       const { nodes: layoutedNodes, edges: layoutedEdges } =
         await applyElkLayout(transformedNodes, transformedEdges);
-
+  
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
       setSelectedNodeId(null); // reset selection on reload
