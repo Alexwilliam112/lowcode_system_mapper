@@ -85,7 +85,16 @@ const Flow = () => {
         type: "default",
         data: { label: node.data?.label || node.id },
         position: { x: 0, y: 0 },
-        style: { color: "black" }, // Set label color to black
+        style: {
+          color: "black", // Set label color to black
+          padding: "10px", // Add padding inside the node
+          textAlign: "center", // Center-align the label
+          overflow: "visible", // Allow text to overflow if necessary
+          whiteSpace: "normal", // Allow text to wrap
+          wordWrap: "break-word", // Break long words if necessary
+          border: "1px solid #ccc", // Optional: Add a border for better visibility
+          borderRadius: "5px", // Optional: Add rounded corners
+        },
       }));
   
       const transformedEdges = validEdges.map((edge, index) => ({
