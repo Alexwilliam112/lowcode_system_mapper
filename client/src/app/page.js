@@ -80,22 +80,43 @@ const Flow = () => {
         (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
       );
   
-      const transformedNodes = data.nodes.map((node) => ({
-        id: node.id,
-        type: "default",
-        data: { label: node.data?.label || node.id },
-        position: { x: 0, y: 0 },
-        style: {
-          color: "black", // Set label color to black
-          padding: "10px", // Add padding inside the node
-          textAlign: "center", // Center-align the label
-          overflow: "visible", // Allow text to overflow if necessary
-          whiteSpace: "normal", // Allow text to wrap
-          wordWrap: "break-word", // Break long words if necessary
-          border: "1px solid #ccc", // Optional: Add a border for better visibility
-          borderRadius: "5px", // Optional: Add rounded corners
-        },
-      }));
+      // Map nodes and apply color based on node_type
+      const transformedNodes = data.nodes.map((node) => {
+        // Set default color based on node_type
+        let nodeColor = "white"; // default color
+  
+        switch (node.node_type) {
+          case "Visual Programming":
+            nodeColor = "lightpurple";
+            break;
+          case "Data Manager":
+            nodeColor = "lightblue";
+            break;
+          case "Experience Manager":
+            nodeColor = "lightgreen";
+            break;
+          default:
+            nodeColor = "lightgray"; // optional default color
+        }
+  
+        return {
+          id: node.id,
+          type: "default",
+          data: { label: node.data?.label || node.id },
+          position: { x: 0, y: 0 },
+          style: {
+            color: "black", // Set label color to black
+            padding: "10px", // Add padding inside the node
+            textAlign: "center", // Center-align the label
+            overflow: "visible", // Allow text to overflow if necessary
+            whiteSpace: "normal", // Allow text to wrap
+            wordWrap: "break-word", // Break long words if necessary
+            border: "1px solid #ccc", // Optional: Add a border for better visibility
+            borderRadius: "5px", // Optional: Add rounded corners
+            backgroundColor: nodeColor, // Set background color based on node_type
+          },
+        };
+      });
   
       const transformedEdges = validEdges.map((edge, index) => ({
         id: edge.id || `e-${edge.source}-${edge.target}-${index}`,
@@ -106,8 +127,10 @@ const Flow = () => {
         style: { stroke: "#222", strokeWidth: 1.5 }, // default style
       }));
   
-      const { nodes: layoutedNodes, edges: layoutedEdges } =
-        await applyElkLayout(transformedNodes, transformedEdges);
+      const { nodes: layoutedNodes, edges: layoutedEdges } = await applyElkLayout(
+        transformedNodes,
+        transformedEdges
+      );
   
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
@@ -116,6 +139,7 @@ const Flow = () => {
       console.error("Error fetching graph data:", error);
     }
   };
+  
 
   useEffect(() => {
     fetchGraphData();
