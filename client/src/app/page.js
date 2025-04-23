@@ -10,45 +10,54 @@ import {
   useNodesState,
   useEdgesState,
 } from "@xyflow/react";
-import {
-  forceSimulation,
-  forceManyBody,
-  forceLink,
-  forceCenter,
-} from "d3-force";
-
+import ELK from "elkjs/lib/elk.bundled.js"; // ✅ Use bundled version (no worker)
 import "@xyflow/react/dist/style.css";
 
-const applyForceLayout = (nodes, edges) => {
-  if (!nodes || !edges) {
-    console.error("Nodes or edges are undefined:", { nodes, edges });
-    return { nodes: [], edges: [] };
-  }
+// ELK layout engine instance
+const elk = new ELK();
 
-  // Deep clone to avoid mutating original state
-  const simNodes = nodes.map((n) => ({ ...n }));
-  const simEdges = edges.map((e) => ({ ...e }));
-
-  const simulation = forceSimulation(simNodes)
-    .force("charge", forceManyBody().strength(-500))
-    .force(
-      "link",
-      forceLink(simEdges)
-        .id((d) => d.id)
-        .distance(200)
-    )
-    .force("center", forceCenter(0, 0))
-    .stop();
-
-  // Run simulation for layout
-  for (let i = 0; i < 300; i++) simulation.tick();
-
-  const updatedNodes = simNodes.map((node) => ({
-    ...node,
-    position: { x: node.x || 0, y: node.y || 0 },
+// Layout function using ELK
+const applyElkLayout = async (nodes, edges) => {
+  const elkNodes = nodes.map((node) => ({
+    id: node.id,
+    width: 180,
+    height: 60,
   }));
 
-  return { nodes: updatedNodes, edges };
+  const elkEdges = edges.map((edge) => ({
+    id: edge.id,
+    sources: [edge.source],
+    targets: [edge.target],
+  }));
+
+  const layout = await elk.layout({
+    id: "root",
+    layoutOptions: {
+      "elk.algorithm": "layered",
+      "elk.direction": "DOWN",
+      "elk.layered.spacing.nodeNodeBetweenLayers": "80",
+      "elk.spacing.nodeNode": "60",
+      "elk.edgeRouting": "ORTHOGONAL",
+      "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+    },
+    children: elkNodes,
+    edges: elkEdges,
+  });
+
+  const positionedNodes = nodes.map((node) => {
+    const layoutNode = layout.children.find((n) => n.id === node.id);
+    return {
+      ...node,
+      position: {
+        x: layoutNode?.x || 0,
+        y: layoutNode?.y || 0,
+      },
+      targetPosition: "top",
+      sourcePosition: "bottom",
+    };
+  });
+
+  return { nodes: positionedNodes, edges };
 };
 
 const Flow = () => {
@@ -74,8 +83,8 @@ const Flow = () => {
 
       const transformedNodes = data.nodes.map((node) => ({
         id: node.id,
-        type: "default", // Optional but helpful
-        data: node.data || { label: node.id },
+        type: "default",
+        data: { label: node.data?.label || node.id },
         position: { x: 0, y: 0 },
       }));
 
@@ -87,10 +96,8 @@ const Flow = () => {
         animated: true,
       }));
 
-      const { nodes: layoutedNodes, edges: layoutedEdges } = applyForceLayout(
-        transformedNodes,
-        transformedEdges
-      );
+      const { nodes: layoutedNodes, edges: layoutedEdges } =
+        await applyElkLayout(transformedNodes, transformedEdges);
 
       setNodes(layoutedNodes);
       setEdges(layoutedEdges);
